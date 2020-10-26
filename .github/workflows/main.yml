@@ -1,0 +1,27 @@
+name: prym-ci-build
+on:
+  pull_request:
+    branches:
+    - master
+  push:
+    branches:
+    - master
+
+jobs:
+
+  lint-code:
+
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.8
+
+    - name: Install black
+      run: pip install black
+
+    - name: Check code with black
+      run: black --check .
