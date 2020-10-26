@@ -1,8 +1,6 @@
 from os import path
 from setuptools import setup, find_packages
 
-import versioneer
-
 here = path.abspath(path.dirname(__file__))
 
 # load the requirements from requirements.txt while removing the environment marks
@@ -11,8 +9,7 @@ with open(path.join(here, "requirements.txt")) as f:
 
 setup(
         name="prym",
-        version=versioneer.get_version(),
-        cmdclass=versioneer.get_cmdclass(),
+        version="0.1",
         description="Convert results of PromQL queries into numpy arrays or pandas dataframes",
         url="https://github.com/chime-experiment/prym",
         author="Richard Shaw",
