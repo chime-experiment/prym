@@ -29,7 +29,7 @@ day = datetime.timedelta(1)
 start = end - day
 
 num_array = client.query_range(query, start, end, "5m", pandas=False)
-pandas_df = client.query_range(query, start, end, "5m", pandas=True)
+pandas_df = client.query_range(('http_requests_total[5m]'), start, end, "5m", pandas=True)
 ```
 
 ```
