@@ -164,6 +164,8 @@ class Prometheus:
         for m in metrics:
             levels |= set(m.keys())
         levels = sorted(list(levels))
+        if len(levels) == 0:
+            raise RuntimeError("Queries that are constructed as pandas df need to have at least one label category in the results")
 
         # Get the set of label values for each metric series and turn into a multilevel
         # column index
