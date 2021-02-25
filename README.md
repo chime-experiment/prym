@@ -22,7 +22,7 @@ import datetime
 
 client = prym.Prometheus("http://prometheus-host:prometheus-query-port")
 
-query = ("http_requests_total{job="apiserver", handler="/api/comments"}[5m]")
+query = ('http_requests_total{job="apiserver", handler="/api/comments"}[5m]')
 
 end = datetime.datetime.utcnow()
 day = datetime.timedelta(1)
