@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "prym"
+authors = [
+    {name = "Richard Shaw", email = "richard@phas.ubc.ca"},
+]
+description = "Convert results of PromQL queries into numpy arrays or pandas dataframes"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+dependencies = [
+    "requests",
+    "numpy",
+    "dunamai",
+]
+dynamic = ["version"]
+
+[tool.setuptools]
+packages = ["prym"]
+
+[tool.ruff]
+select = ["ALL"]
+ignore = [
+    "TRY003", "EM101", "EM102", "ANN101", "ANN102", "ANN202", "ANN204", "PD002", "B905"
+]
+extend-exclude = ["code"]
+
+[tool.ruff.pydocstyle]
+convention = "numpy"
