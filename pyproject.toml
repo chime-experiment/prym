@@ -24,7 +24,8 @@ packages = ["prym"]
 [tool.ruff]
 select = ["ALL"]
 ignore = [
-    "TRY003", "EM101", "EM102", "ANN101", "ANN102", "ANN202", "ANN204", "PD002", "B905"
+    "TRY003", "EM101", "EM102", "ANN101", "ANN102", "ANN202", "ANN204", "PD002", "B905",
+    "G004",
 ]
 extend-exclude = ["code"]
 
