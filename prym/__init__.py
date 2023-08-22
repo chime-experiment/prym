@@ -1,12 +1,13 @@
-from datetime import datetime
+"""Query a prometheus compatible database."""
 import logging
 import re
-from typing import Union, Callable, Any
+from collections.abc import Callable
+from datetime import datetime
+from typing import Any
 
 import numpy as np
 import pandas as pd
 import requests
-
 
 # Get a logger object
 logger = logging.getLogger(__name__)
@@ -28,7 +29,11 @@ class Prometheus:
         logger.debug(f"Creating prometheus query object for {url}")
         self.url = url
 
-    def query(self, query: str, time: float | datetime):
+    def query(
+        self,
+        query: str,
+        time: float | datetime,
+    ) -> tuple[np.ndarray, dict[str, str]]:
         """Perform a prometheus instant query."""
         raise NotImplementedError("Instant queries are not yet implemented.")
 
@@ -38,6 +43,7 @@ class Prometheus:
         start: float | datetime,
         end: float | datetime,
         step: float | int | str,
+        *,
         sort: Callable[[dict], Any] | None = None,
         pandas: bool = False,
     ) -> ResultsTuple | pd.DataFrame:
@@ -73,14 +79,13 @@ class Prometheus:
             Only returned if pandas not set. An array of the UNIX timestamps of the
             samples.
         """
-
         # Validate and convert the parameters into float timestamps and intervals
         st_unix = _dt_to_unix(start)
         et_unix = _dt_to_unix(end)
         step_s = _duration_to_s(step)
 
         logger.debug(
-            f'Prometheus query="{query}" from {start} to {end} with interval {step}.'
+            f'Prometheus query="{query}" from {start} to {end} with interval {step}.',
         )
 
         results = self._perform_query_range(query, st_unix, et_unix, step_s)
@@ -98,25 +103,30 @@ class Prometheus:
 
         return data
 
-    def _perform_query_range(self, query, st, et, step):
+    def _perform_query_range(
+        self,
+        query: str,
+        st: float,
+        et: float,
+        step: float,
+    ) -> dict:
         """Perform and validate a range query."""
-
         params = {"query": query, "start": st, "end": et, "step": step}
-        r = requests.get(f"{self.url}/api/v1/query_range", params=params)
+        r = requests.get(f"{self.url}/api/v1/query_range", params=params)  # noqa: S113
 
-        if r.status_code == 400:
+        if r.status_code == 400:  # noqa: PLR2004
             raise RuntimeError(
                 f"Missing or incorrect parameters ({r.status_code}). "
-                f"Prometheus says '{r.text}'"
+                f"Prometheus says '{r.text}'",
             )
-        elif r.status_code == 422:
+        if r.status_code == 422:  # noqa: PLR2004
             raise RuntimeError(
                 f"Query could not be executed ({r.status_code}). "
-                f"Prometheus says '{r.text}'"
+                f"Prometheus says '{r.text}'",
             )
-        elif r.status_code != 200:
+        if r.status_code != 200:  # noqa: PLR2004
             raise RuntimeError(
-                f"Query failed ({r.status_code}). Prometheus says: '{r.text}'"
+                f"Query failed ({r.status_code}). Prometheus says: '{r.text}'",
             )
 
         j = r.json()
@@ -135,10 +145,13 @@ class Prometheus:
 
     @classmethod
     def _range_query_to_numpy(
-        cls, results: dict, st_unix: float, et_unix: float, step_s: float
+        cls,
+        results: dict,
+        st_unix: float,
+        et_unix: float,
+        step_s: float,
     ) -> ResultsTuple:
         """Take a list of results and turn it into a numpy array."""
-
         # Calculate the full range of timestamps we want data at. Add a small constant
         # to the end to make it inclusive if it lies exactly on an interval boundary
         times = np.arange(st_unix, et_unix + 1e-6 * step_s, step_s)
@@ -170,19 +183,21 @@ class Prometheus:
 
     @classmethod
     def _numpy_to_pandas(
-        cls, data: np.ndarray, metrics: list, times: np.ndarray
+        cls,
+        data: np.ndarray,
+        metrics: list,
+        times: np.ndarray,
     ) -> pd.DataFrame:
         """Take a numpy result (with metrics and times) and convert to a DataFrame."""
-
         # Get the set of all the unique label names
         levels = set()
         for m in metrics:
             levels |= set(m.keys())
-        levels = sorted(list(levels))
+        levels = sorted(levels)
         if len(levels) == 0:
             raise RuntimeError(
                 "Queries that are constructed as pandas df need to have at least one "
-                "label category in the results"
+                "label category in the results",
             )
 
         # Get the set of label values for each metric series and turn into a multilevel
@@ -191,11 +206,13 @@ class Prometheus:
         col_index = pd.MultiIndex.from_tuples(mt, names=levels)
 
         return pd.DataFrame(
-            data.T, columns=col_index, index=pd.to_datetime(times, unit="s")
+            data.T,
+            columns=col_index,
+            index=pd.to_datetime(times, unit="s"),
         )
 
 
-def _duration_to_s(duration: Union[float, int, str]) -> float:
+def _duration_to_s(duration: float | int | str) -> float:
     """Convert a Prometheus duration string to an interval in s.
 
     Parameters
@@ -209,10 +226,10 @@ def _duration_to_s(duration: Union[float, int, str]) -> float:
     seconds
         The number of seconds corresponding to the duration.
     """
-    if not isinstance(duration, (float, int, str)):
+    if not isinstance(duration, float | int | str):
         raise TypeError(f"Cannot convert {duration}.")
 
-    if isinstance(duration, (float, int)):
+    if isinstance(duration, float | int):
         return float(duration)
 
     duration_codes = {
@@ -254,13 +271,12 @@ def metric_name(mdict: dict[str, str]) -> str:
     s
         The string for the metric series formatted in the standard prometheus manner.
     """
-
     labels = [f'{key}="{mdict[key]}"' for key in sorted(mdict) if key != "__name__"]
 
     return f"{mdict['__name__']}{{{','.join(labels)}}}"
 
 
-def _dt_to_unix(dt: Union[float, datetime]) -> float:
+def _dt_to_unix(dt: float | datetime) -> float:
     """Convert a datetime or float to a UNIX timestamp.
 
     Parameters
@@ -274,7 +290,7 @@ def _dt_to_unix(dt: Union[float, datetime]) -> float:
     timestamp
         UNIX timestamp.
     """
-    if not isinstance(dt, (float, datetime)):
+    if not isinstance(dt, float | datetime):
         raise TypeError(f"dt must be a float or datetime. Got {type(dt)}")
 
     if isinstance(dt, float):
@@ -297,7 +313,6 @@ def concatenate_results(results: list[ResultsTuple]) -> ResultsTuple:
     combined_results
         The combined results, with sorted time and metric axes.
     """
-
     all_metrics = {}
     all_times = []
 
@@ -343,7 +358,8 @@ def concatenate_results(results: list[ResultsTuple]) -> ResultsTuple:
             final_metric_ind = mstr_list.index(mstr)
 
             output_data[
-                final_metric_ind, cur_time_ind : (cur_time_ind + num_time_in_query)
+                final_metric_ind,
+                cur_time_ind : (cur_time_ind + num_time_in_query),
             ] = data[query_metric_ind]
 
         cur_time_ind += num_time_in_query
