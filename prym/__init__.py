@@ -141,7 +141,7 @@ class Prometheus:
 
         # Calculate the full range of timestamps we want data at. Add a small constant
         # to the end to make it inclusive if it lies exactly on an interval boundary
-        times = np.arange(st_unix, et_unix + 1e-6, step_s)
+        times = np.arange(st_unix, et_unix + 1e-6 * step_s, step_s)
 
         # Create the destination array and NaN fill for missing data
         data = np.zeros((len(results), len(times)), dtype=np.float64)
@@ -157,7 +157,7 @@ class Prometheus:
             # on the fact that Prometheus produces the same grid of samples as we do in
             # here. That should be fine, and we use `np.rint` to mitigate any possible
             # rounding issues, but it's worth noting.
-            inds = np.rint((np.array(metric_times) - st_unix) / step_s).astype(np.int)
+            inds = np.rint((np.array(metric_times) - st_unix) / step_s).astype(int)
 
             # Insert the data while converting all the string values data into floating
             # point, simply using `float` works fine as it supports all the string
