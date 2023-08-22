@@ -101,8 +101,20 @@ class Prometheus:
         params = {"query": query, "start": st, "end": et, "step": step}
         r = requests.get(f"{self.url}/api/v1/query_range", params=params)
 
-        if r.status_code != 200:
-            raise RuntimeError(f"Query request failed with code {r.status_code}")
+        if r.status_code == 400:
+            raise RuntimeError(
+                f"Missing or incorrect parameters ({r.status_code}). "
+                f"Prometheus says '{r.text}'"
+            )
+        elif r.status_code == 422:
+            raise RuntimeError(
+                f"Query could not be executed ({r.status_code}). "
+                f"Prometheus says '{r.text}'"
+            )
+        elif r.status_code != 200:
+            raise RuntimeError(
+                f"Query failed ({r.status_code}). Prometheus says: '{r.text}'"
+            )
 
         j = r.json()
 
