@@ -14,6 +14,7 @@ license = {text = "MIT"}
 dependencies = [
     "requests",
     "numpy",
+    "pandas",
     "dunamai",
 ]
 dynamic = ["version"]
