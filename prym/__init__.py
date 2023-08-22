@@ -40,7 +40,7 @@ class Prometheus:
     ) -> Union[Tuple[np.ndarray, list, np.ndarray], pd.DataFrame]:
         """Perform a prometheus range query.
 
-        This will evalulate a PromQL query and return the results as either a numpy
+        This will evaluate a PromQL query and return the results as either a numpy
         array, or as a pandas DataFrame.
 
         Parameters
