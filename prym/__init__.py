@@ -180,7 +180,10 @@ class Prometheus:
             levels |= set(m.keys())
         levels = sorted(list(levels))
         if len(levels) == 0:
-            raise RuntimeError("Queries that are constructed as pandas df need to have at least one label category in the results")
+            raise RuntimeError(
+                "Queries that are constructed as pandas df need to have at least one "
+                "label category in the results"
+            )
 
         # Get the set of label values for each metric series and turn into a multilevel
         # column index
@@ -238,7 +241,7 @@ def _duration_to_s(duration: Union[float, int, str]) -> float:
     return seconds
 
 
-def _metric_name(mdict: dict) -> str:
+def metric_name(mdict: dict[str, str]) -> str:
     """Convert a metric-label dictionary to a string.
 
     Parameters
@@ -252,9 +255,7 @@ def _metric_name(mdict: dict) -> str:
         The string for the metric series formatted in the standard prometheus manner.
     """
 
-    mdict["__name__"]
-
-    labels = [f'{key}="{value}"' for key, value in mdict.items() if key != "__name__"]
+    labels = [f'{key}="{mdict[key]}"' for key in sorted(mdict) if key != "__name__"]
 
     return f"{mdict['__name__']}{{{','.join(labels)}}}"
 
