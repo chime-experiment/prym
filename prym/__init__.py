@@ -281,3 +281,71 @@ def _dt_to_unix(dt: Union[float, datetime]) -> float:
         return dt
 
     return dt.timestamp()
+
+
+def concatenate_results(results: list[ResultsTuple]) -> ResultsTuple:
+    """Combine a set of separate prometheus queries.
+
+    Parameters
+    ----------
+    results
+        The set of results to combine. These must not have overlapping ranges of time,
+        but can otherwise come in any order, with any contents.
+
+    Returns
+    -------
+    combined_results
+        The combined results, with sorted time and metric axes.
+    """
+
+    all_metrics = {}
+    all_times = []
+
+    # Sort the non-zero queries by the *first* timestamp of each
+    results = sorted([q for q in results if len(q[2]) > 0], key=lambda x: x[2][0])
+
+    # Extract all the unique metrics and the times for each query.
+    for _, metrics, times in results:
+        for m in metrics:
+            mstr = metric_name(m)
+            if mstr not in all_metrics:
+                all_metrics[mstr] = m
+
+        # Check they don't overlap as we don't want the complexity of merging
+        if all_times and times[0] < all_times[-1][-1]:
+            raise ValueError("Query time periods overlap.")
+        all_times.append(times)
+
+    # Get the final array of timestamps
+    all_times = np.concatenate(all_times)
+
+    # Get the sorted list of metrics, both as a string (for lookups) and a list of dicts
+    # for the return
+    mstr_list = sorted(all_metrics)
+    mdict_list = [all_metrics[mstr] for mstr in mstr_list]
+
+    # Create a nan filled array that we will fill with the actual results
+    output_data = np.empty((len(mstr_list), len(all_times)), dtype=np.float64)
+    output_data[:] = np.nan
+
+    # Keep track of where in the output we current are copying to
+    cur_time_ind = 0
+
+    # Iterate over all the results
+    for data, metrics, _ in results:
+        num_time_in_query = data.shape[1]
+
+        # For each metric find where it is indexed in the final result set and copy the
+        # data over
+        for query_metric_ind, metric in enumerate(metrics):
+            mstr = metric_name(metric)
+
+            final_metric_ind = mstr_list.index(mstr)
+
+            output_data[
+                final_metric_ind, cur_time_ind : (cur_time_ind + num_time_in_query)
+            ] = data[query_metric_ind]
+
+        cur_time_ind += num_time_in_query
+
+    return output_data, mdict_list, all_times
