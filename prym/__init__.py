@@ -5,9 +5,12 @@ from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
+import dunamai as _dunamai
 import numpy as np
 import pandas as pd
 import requests
+
+__version__ = _dunamai.Version.from_any_vcs().serialize(dirty=True)
 
 # Get a logger object
 logger = logging.getLogger(__name__)
