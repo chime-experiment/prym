@@ -1,7 +1,7 @@
 from datetime import datetime
 import logging
 import re
-from typing import Union, Callable, Optional, Any, Tuple
+from typing import Union, Callable, Any
 
 import numpy as np
 import pandas as pd
@@ -10,6 +10,9 @@ import requests
 
 # Get a logger object
 logger = logging.getLogger(__name__)
+
+
+ResultsTuple = tuple[np.ndarray, list[dict[str, str]], np.ndarray]
 
 
 class Prometheus:
@@ -25,19 +28,19 @@ class Prometheus:
         logger.debug(f"Creating prometheus query object for {url}")
         self.url = url
 
-    def query(self, query: str, time: Union[float, datetime]):
+    def query(self, query: str, time: float | datetime):
         """Perform a prometheus instant query."""
         raise NotImplementedError("Instant queries are not yet implemented.")
 
     def query_range(
         self,
         query: str,
-        start: Union[float, datetime],
-        end: Union[float, datetime],
-        step: Union[float, int, str],
-        sort: Optional[Callable[[dict], Any]] = None,
+        start: float | datetime,
+        end: float | datetime,
+        step: float | int | str,
+        sort: Callable[[dict], Any] | None = None,
         pandas: bool = False,
-    ) -> Union[Tuple[np.ndarray, list, np.ndarray], pd.DataFrame]:
+    ) -> ResultsTuple | pd.DataFrame:
         """Perform a prometheus range query.
 
         This will evaluate a PromQL query and return the results as either a numpy
@@ -133,7 +136,7 @@ class Prometheus:
     @classmethod
     def _range_query_to_numpy(
         cls, results: dict, st_unix: float, et_unix: float, step_s: float
-    ) -> Tuple[np.ndarray, list, np.ndarray]:
+    ) -> ResultsTuple:
         """Take a list of results and turn it into a numpy array."""
 
         # Calculate the full range of timestamps we want data at. Add a small constant
