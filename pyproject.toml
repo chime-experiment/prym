@@ -15,12 +15,14 @@ dependencies = [
     "requests",
     "numpy",
     "pandas",
-    "dunamai",
 ]
 dynamic = ["version"]
 
 [tool.setuptools]
 packages = ["prym"]
+
+[tool.setuptools.dynamic]
+version = {attr = "prym.__version__"}
 
 [tool.ruff]
 select = ["ALL"]
