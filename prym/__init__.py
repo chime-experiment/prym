@@ -276,7 +276,7 @@ def metric_name(mdict: dict[str, str]) -> str:
     """
     labels = [f'{key}="{mdict[key]}"' for key in sorted(mdict) if key != "__name__"]
 
-    return f"{mdict['__name__']}{{{','.join(labels)}}}"
+    return f"{mdict.get('__name__','')}{{{','.join(labels)}}}"
 
 
 def _dt_to_unix(dt: float | datetime) -> float:
