@@ -12,11 +12,17 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 dependencies = [
-    "requests",
+    "urllib3",
     "numpy",
     "pandas",
 ]
 dynamic = ["version"]
+
+[project.optional-dependencies]
+perf = [
+  "orjson",
+  "fastnumbers",
+]
 
 [tool.setuptools]
 packages = ["prym"]
