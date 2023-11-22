@@ -7,12 +7,35 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-import requests
+import urllib3
 
 __version__ = "2023.11.0"
 
 # Get a logger object
 logger = logging.getLogger(__name__)
+
+# Try to use orjson as a performance boost for decoding the response
+try:
+    import orjson
+
+    json_decoder = orjson.loads
+except ImportError:
+    logger.debug(
+        "Could not import orjson. Falling back to slower standard library json module.",
+    )
+    import json
+
+    json_decoder = json.loads
+
+# Try to use fastnumbers as a performance boost. This is used for converting the string
+# encoded numbers to floats in the prometheus output
+try:
+    import fastnumbers
+
+    float_parse = fastnumbers.try_float
+except ImportError:
+    logger.debug("Could not import fastnumbers. Using builtin `float` function.")
+    float_parse = float
 
 
 ResultsTuple = tuple[np.ndarray, list[dict[str, str]], np.ndarray]
@@ -39,12 +62,12 @@ class Prometheus:
         """Perform a prometheus instant query."""
         raise NotImplementedError("Instant queries are not yet implemented.")
 
-    def query_range(
+    def query_range(  # noqa: PLR0913
         self,
         query: str,
         start: float | datetime,
         end: float | datetime,
-        step: float | int | str,
+        step: float | str,
         *,
         sort: Callable[[dict], Any] | None = None,
         pandas: bool = False,
@@ -114,24 +137,35 @@ class Prometheus:
     ) -> dict:
         """Perform and validate a range query."""
         params = {"query": query, "start": st, "end": et, "step": step}
-        r = requests.get(f"{self.url}/api/v1/query_range", params=params)  # noqa: S113
 
-        if r.status_code == 400:  # noqa: PLR2004
-            raise RuntimeError(
-                f"Missing or incorrect parameters ({r.status_code}). "
-                f"Prometheus says '{r.text}'",
+        try:
+            http = urllib3.PoolManager()
+            r = http.request_encode_url(
+                "GET",
+                f"{self.url}/api/v1/query_range",
+                fields=params,
             )
-        if r.status_code == 422:  # noqa: PLR2004
+        except urllib3.exceptions.HTTPError as e:
             raise RuntimeError(
-                f"Query could not be executed ({r.status_code}). "
-                f"Prometheus says '{r.text}'",
+                "Connection failed to prometheus server {self.url}.",
+            ) from e
+
+        if r.status == 400:  # noqa: PLR2004
+            raise RuntimeError(
+                f"Missing or incorrect parameters ({r.status}). "
+                f"Prometheus says '{r.data}'",
             )
-        if r.status_code != 200:  # noqa: PLR2004
+        if r.status == 422:  # noqa: PLR2004
             raise RuntimeError(
-                f"Query failed ({r.status_code}). Prometheus says: '{r.text}'",
+                f"Query could not be executed ({r.status}). "
+                f"Prometheus says '{r.data}'",
+            )
+        if r.status != 200:  # noqa: PLR2004
+            raise RuntimeError(
+                f"Query failed ({r.status}). Prometheus says: '{r.data}'",
             )
 
-        j = r.json()
+        j = json_decoder(r.data)
 
         if "status" not in j or j["status"] != "success":
             raise RuntimeError("Query was not successful.")
@@ -166,7 +200,8 @@ class Prometheus:
 
         for ii, t in enumerate(results):
             metric = t["metric"]
-            metric_times, values = zip(*t["values"])
+
+            metric_times = [u[0] for u in t["values"]]
 
             # This identifies which slots to insert the data into. Note that it relies
             # on the fact that Prometheus produces the same grid of samples as we do in
@@ -174,10 +209,10 @@ class Prometheus:
             # rounding issues, but it's worth noting.
             inds = np.rint((np.array(metric_times) - st_unix) / step_s).astype(int)
 
-            # Insert the data while converting all the string values data into floating
+            # Extract the data while converting all the string values data into floating
             # point, simply using `float` works fine as it supports all the string
             # prometheus uses for special values
-            data[ii, inds] = [float(v) for v in values]
+            data[ii, inds] = [float_parse(u[1]) for u in t["values"]]
 
             metrics.append(metric)
 
@@ -214,7 +249,7 @@ class Prometheus:
         )
 
 
-def _duration_to_s(duration: float | int | str) -> float:
+def _duration_to_s(duration: float | str) -> float:
     """Convert a Prometheus duration string to an interval in s.
 
     Parameters
