@@ -1,6 +1,9 @@
+"""Prym tests."""
+
 import numpy as np
-import prym
 import pytest
+
+import prym
 
 # Saved values from a query against an actual prometheus instance
 # The query parameters...
@@ -13,7 +16,17 @@ end = start + 1200
 step = 120
 
 # The actual returned json result used for mocking the response
-result = b'{"status":"success","data":{"resultType":"matrix","result":[{"metric":{"freq_id":"100","instance":"csCg9","job":"kotekan","stage_name":"/rfi_stage2/rfi1"},"values":[[1700590237,"1"],[1700590357,"1"],[1700590477,"1"],[1700590597,"1"],[1700590717,"1"],[1700590837,"1"],[1700590957,"1"],[1700591077,"1"],[1700591197,"1"],[1700591317,"1"],[1700591437,"1"]]},{"metric":{"freq_id":"300","instance":"cnCg7","job":"kotekan","stage_name":"/rfi_stage2/rfi2"},"values":[[1700590237,"NaN"],[1700590357,"NaN"],[1700590477,"NaN"],[1700590597,"1"],[1700590717,"1"],[1700590837,"1"],[1700590957,"1"],[1700591077,"NaN"],[1700591197,"NaN"],[1700591317,"NaN"],[1700591437,"NaN"]]}]}}'
+result = (
+    b'{"status":"success","data":{"resultType":"matrix","result":[{"metric":{"freq_id"'
+    b':"100","instance":"csCg9","job":"kotekan","stage_name":"/rfi_stage2/rfi1"},'
+    b'"values":[[1700590237,"1"],[1700590357,"1"],[1700590477,"1"],[1700590597,"1"],'
+    b'[1700590717,"1"],[1700590837,"1"],[1700590957,"1"],[1700591077,"1"],[1700591197,'
+    b'"1"],[1700591317,"1"],[1700591437,"1"]]},{"metric":{"freq_id":"300","instance":'
+    b'"cnCg7","job":"kotekan","stage_name":"/rfi_stage2/rfi2"},"values":[[1700590237,'
+    b'"NaN"],[1700590357,"NaN"],[1700590477,"NaN"],[1700590597,"1"],[1700590717,"1"],'
+    b'[1700590837,"1"],[1700590957,"1"],[1700591077,"NaN"],[1700591197,"NaN"],'
+    b'[1700591317,"NaN"],[1700591437,"NaN"]]}]}}'
+)
 
 # And the parsed return values...
 test_values = np.array(
@@ -40,8 +53,9 @@ test_metrics = [
 ]
 
 
-@pytest.fixture
+@pytest.fixture()
 def full_query(httpserver):
+    """A query with results."""
     httpserver.expect_request(
         "/api/v1/query_range",
         query_string={
@@ -77,7 +91,7 @@ def test_failures(full_query):
     """Test a query returning actual results."""
     p = prym.Prometheus(full_query + "/subadddress/")
 
-    with pytest.raises(RuntimeError, match="Query failed \(500\).*"):
+    with pytest.raises(RuntimeError, match=r"Query failed \(500\).*"):
         _ = p.query_range(query, start=start, end=end, step="2m")
 
     p = prym.Prometheus("http://doesnotexist:8500/")
@@ -85,8 +99,9 @@ def test_failures(full_query):
         _ = p.query_range(query, start=start, end=end, step="2m")
 
 
-@pytest.fixture
+@pytest.fixture()
 def empty_query(httpserver):
+    """A query that returns no results."""
     result = b'{"status":"success","data":{"resultType":"matrix","result":[]}}'
 
     httpserver.expect_request("/api/v1/query_range").respond_with_data(result)
