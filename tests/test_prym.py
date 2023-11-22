@@ -73,6 +73,18 @@ def test_query(full_query):
     assert metrics[1] == test_metrics[1]
 
 
+def test_failures(full_query):
+    """Test a query returning actual results."""
+    p = prym.Prometheus(full_query + "/subadddress/")
+
+    with pytest.raises(RuntimeError, match="Query failed \(500\).*"):
+        _ = p.query_range(query, start=start, end=end, step="2m")
+
+    p = prym.Prometheus("http://doesnotexist:8500/")
+    with pytest.raises(RuntimeError, match="Connection failed.*"):
+        _ = p.query_range(query, start=start, end=end, step="2m")
+
+
 @pytest.fixture
 def empty_query(httpserver):
     result = b'{"status":"success","data":{"resultType":"matrix","result":[]}}'
