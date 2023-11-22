@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import urllib3
 
-__version__ = "2023.11.0"
+__version__ = "2023.11.1"
 
 # Get a logger object
 logger = logging.getLogger(__name__)
